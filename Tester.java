@@ -75,20 +75,28 @@ public class Tester {
             int tempNum = -1;
             if (!blockedTasks.isEmpty()) { // First check blocked tasks
                 for (Task t : blockedTasks) {
-                    printAvailableResources(resourceMap);
-                    t.printNeededResources();
-                    visitedTasks.add(t.getTaskNumber());
-                    t.doNextActivity(resourceMap, terminatedTasks, blockedTasks, addToResourceList, cycle);
+                    if (t.getComputeTime()!=0) {
+                        printAvailableResources(resourceMap);
+                        t.printNeededResources();
+                        visitedTasks.add(t.getTaskNumber());
+                        t.doNextActivity(resourceMap, terminatedTasks, blockedTasks, addToResourceList, cycle);
+                    }
                 }
             }
             while (it.hasNext()) { // Do next activity for each Task
                 printAvailableResources(resourceMap);
                 Map.Entry me = (Map.Entry) it.next();
                 Task t = (Task)me.getValue();
-                t.printNeededResources();
-                if (!visitedTasks.contains(t.getTaskNumber())) { // If blocked task was already checked, skip and only do tasks not checked.
-                    t.doNextActivity(resourceMap, terminatedTasks, blockedTasks, addToResourceList, cycle);
-                } 
+                if (t.getComputeTime() != 0) {
+                    t.decreaseComputeTime(); // If default compute time is 0, do nothing. Else, decrement compute time
+                }
+                else {
+                    t.printNeededResources();
+                    if (!visitedTasks.contains(t.getTaskNumber())) { // If blocked task was already checked, skip and only do tasks not checked.
+                        t.doNextActivity(resourceMap, terminatedTasks, blockedTasks, addToResourceList, cycle);
+                    } 
+                }
+               
             }
             while (!addToResourceList.isEmpty()) { // Update the available resources after a cycle, so those resources released during a cycle aren't available during the same cycle.
                 for (Map.Entry mEntry : addToResourceList) {
@@ -100,24 +108,10 @@ public class Tester {
 
             }
             cycle++;
-            
+           
         }
-        Collections.sort(terminatedTasks, new Comparator<Task>() {
-			@Override
-			public int compare(Task t1, Task t2) {
-				return t1.getTaskNumber() - t2.getTaskNumber();
-			}
-		});
-	
-        for (Task t : terminatedTasks) {
-            if (t.getAborted()) {
-                t.printOutput(true);
-            }
-            else {
-                t.printOutput(false);
-            }
-            
-        }
+        printTasksBankers(terminatedTasks);
+        
     }
 
     public static void printAvailableResources(HashMap<Integer, Integer> resourceMap) {
@@ -138,6 +132,30 @@ public class Tester {
         //     System.out.print(me.getValue() + " ");
         // }
         // System.out.println(")");
+    }
+
+    public static void printTasksBankers(List<Task> terminatedTasks) {
+        Collections.sort(terminatedTasks, new Comparator<Task>() { // sort by taskNum
+			@Override
+			public int compare(Task t1, Task t2) {
+				return t1.getTaskNumber() - t2.getTaskNumber();
+			}
+        });
+        int totalRunningTime = 0;
+        int totalWaitTime = 0;
+        for (Task t : terminatedTasks) {
+            if (t.getAborted()) {
+                t.printOutput(true);
+            }
+            else {
+                t.printOutput(false);
+                totalRunningTime += t.getFinishingTime();
+                totalWaitTime += t.getWaitingTime();
+            }
+            
+        }
+        double totalPercentOfWaitingTime = (double)(totalWaitTime)/(totalRunningTime)* 100;
+        System.out.printf("%-15s%-5d%-5d%d%%\n", "Total", totalRunningTime, totalWaitTime, (int)totalPercentOfWaitingTime);
     }
 
    

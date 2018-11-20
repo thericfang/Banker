@@ -4,6 +4,7 @@ import java.util.Iterator;
 import javax.annotation.Resources;
 public class Task {
     private boolean aborted;
+    private int computeTime;
     private int taskNumber;
     private int curCycle;
     private int endCycle;
@@ -31,7 +32,7 @@ public class Task {
     }
     public void doNextActivity (HashMap<Integer, Integer> resourceMap, List<Task> terminatedTasks, 
         List<Task> blockedTasks, List<Map.Entry> addToResourceList, int cycle) {
-            if (!activities.isEmpty() && !aborted) {
+            if (!activities.isEmpty() && !aborted && computeTime == 0) {
                 Activity curActivity = activities.peek();
                 String name = curActivity.getName();
                 int taskNum = curActivity.getTaskNum();
@@ -56,14 +57,26 @@ public class Task {
                 else if (name.equals("request")) { 
                     
                     // First check if banker can grant / safe state. need <= available
-                    if (neededResources.get(resourceNum) <= resourceMap.get(resourceNum)) {
+                    if (checkSafeState(neededResources, resourceMap)) {
+                        // Check to see if request is greater than claim.
+                        if (units > neededResources.get(resourceNum)) {
+                            aborted = true;
+                            terminatedTasks.add(this);
+                            System.out.println("Task " + taskNum + " ABORTED");
+                            Map.Entry<Integer, Integer> me = new AbstractMap.SimpleEntry<Integer,Integer>(resourceNum, allocatedResources.get(resourceNum));
+                            addToResourceList.add(me);
 
-                        // update current allocated matrix
-                        int current = allocatedResources.get(resourceNum);
-                        allocatedResources.put(resourceNum, current + units); // Add units to current, update allocated resources
-                        resourceMap.put(resourceNum, resourceMap.get(resourceNum)-units); // Update available resources
-                        activities.poll();
-                        System.out.println("Finished Activity: " + curActivity);
+
+                        }
+                        else {
+                            // update current allocated matrix
+                            int current = allocatedResources.get(resourceNum);
+                            allocatedResources.put(resourceNum, current + units); // Add units to current, update allocated resources
+                            resourceMap.put(resourceNum, resourceMap.get(resourceNum)-units); // Update available resources
+                            activities.poll();
+                            System.out.println("Finished Activity: " + curActivity);
+                        }
+                       
 
                     }
                     else { // Else block the task
@@ -83,6 +96,7 @@ public class Task {
                     System.out.print("Before relase: ");
                     printAllocatedResources();
                     allocatedResources.put(resourceNum, current - units);
+                    // Add to Resource List the amount that should be added to resource delayed after cycle
                     Map.Entry<Integer, Integer> me = new AbstractMap.SimpleEntry<Integer,Integer>(resourceNum, units);
                     addToResourceList.add(me);
                     // resourceMap.put(resourceNum, resourceMap.get(resourceNum) + units);
@@ -100,6 +114,12 @@ public class Task {
                     endCycle = cycle;
                     
                 }
+                else if (name.equals("compute")) {
+                    computeTime = resourceNum; // Compute time is given as the second number
+                    decreaseComputeTime();  
+                    System.out.println("Finished Activity: " + curActivity);
+                    activities.poll();                  
+                }
             }
             curCycle = cycle;
         }
@@ -115,10 +135,15 @@ public class Task {
         }
     }
 
-    public void printAllocatedResources() {
+    public void printAllocatedResources() { 
         for (Map.Entry me : allocatedResources.entrySet()) {
             System.out.println("Task " + getTaskNumber() + " Allocated resources: " + me.getValue() + " units of Resource Number " + me.getKey());
         }
+    }
+
+    public void decreaseComputeTime() { // Decrements the compute time
+        computeTime--;
+        System.out.println("Compute time decremented. Time remaining for compute of Task " + getTaskNumber() + ": " +computeTime);
     }
     
 
@@ -141,16 +166,21 @@ public class Task {
             Map.Entry allocatedPair = (Map.Entry) it2.next();
             int difference = (Integer) maxPair.getValue() - (Integer) allocatedPair.getValue();
             neededResources.put(counter, difference);
+            counter++;
         }
     }
 
     public void printOutput(boolean aborted) {
+        double timeWaiting = (double)(waitingTime)/ endCycle * 100;
+        
         if (aborted) {
             System.out.printf("Task %-10daborted\n", taskNumber);
         }
         else {
-            System.out.printf("Task %-10d%-5d%-5d\n", taskNumber, endCycle, waitingTime);
+            System.out.printf("Task %-10d%-5d%-5d%d%%\n", taskNumber, endCycle, waitingTime, (int)timeWaiting);
         }
+
+
         
     }
 
@@ -162,6 +192,28 @@ public class Task {
 
     public boolean getAborted() {
         return this.aborted;
+    }
+
+    public boolean checkSafeState (HashMap<Integer, Integer> neededResources, HashMap<Integer, Integer> resourceMap) {
+        Iterator it1 = neededResources.entrySet().iterator();
+        Iterator it2 = resourceMap.entrySet().iterator();
+        while (it1.hasNext()) {
+            Map.Entry mEntry1 = (Map.Entry)it1.next();
+            Map.Entry mEntry2 = (Map.Entry)it2.next();
+            if ((Integer) mEntry1.getValue() > (Integer)mEntry2.getValue()) {
+                return false;
+            }
+        }
+        return true;
+
+    }
+
+    public int getComputeTime() {
+        return this.computeTime;
+    }
+
+    public int getWaitingTime() {
+        return this.waitingTime;
     }
 
 
