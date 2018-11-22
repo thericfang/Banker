@@ -3,15 +3,19 @@ import java.util.Iterator;
 
 import javax.annotation.Resources;
 public class BankersTask {
-    private boolean aborted;
+
+    private boolean aborted; 
     private int computeTime;
     private int taskNumber;
     private int endCycle;
     private int waitingTime = 0;
-    private Queue<Activity> activities;
+    private Queue<Activity> activities; // The queue of activities to run for a task
     private HashMap<Integer, Integer> maxResources; // Max needed after initiate
     private HashMap<Integer, Integer> allocatedResources; // How many are currently allocated of each
     private HashMap<Integer, Integer> neededResources; // How many of each resource is needed
+
+    // In this algorithm, there are three resource matrices to check determine safe states
+
     public BankersTask (int taskNumber) {
         this.taskNumber = taskNumber;
         activities = new LinkedList<Activity>();
@@ -19,31 +23,38 @@ public class BankersTask {
         allocatedResources = new HashMap<Integer, Integer>();
         neededResources = new HashMap<Integer, Integer>();
     }
+
+    // Add activity to the activities queue
     public void addActivity (String activity, int taskNum, int resourceNum, int units) {
         Activity a = new Activity(activity, taskNum, resourceNum, units);
         activities.add(a);
     }
-    public void printActivities () {
-        for (Activity a : activities) {
-            System.out.println(a);
-        }
-    }
+
+    // Method to do the next activity in the activities queue
     public void doNextActivity (HashMap<Integer, Integer> resourceMap, List<BankersTask> terminatedTasks, 
         List<BankersTask> blockedTasks, List<Map.Entry> addToResourceList, int cycle, List<BankersTask> removeList) {
+
+
+        // Do activities
         if (!activities.isEmpty() && !aborted && computeTime == 0) {
+
             Activity curActivity = activities.peek();
             String name = curActivity.getName();
             int taskNum = curActivity.getTaskNum();
             int resourceNum = curActivity.getResourceNum();
             int units = curActivity.getUnits();
-            if (name.equals("initiate")) { // Should be fine
+
+            // If initiate, update max claim matrix
+            if (name.equals("initiate")) { 
+
                 initializeAllocatedResources(resourceMap);
+
                 if (units > resourceMap.get(resourceNum)) { // Error Checking: If claim is larger than resources in system, abort task.
                     aborted = true;
                     terminatedTasks.add(this);
                     endCycle = cycle;
                 }
-                else {
+                else { 
                     maxResources.put(resourceNum, units);
                     neededResources.put(resourceNum, units);
                     updateNeededResources();
@@ -62,7 +73,6 @@ public class BankersTask {
                     if (units > neededResources.get(resourceNum)) {
                         aborted = true;
                         terminatedTasks.add(this);
-                        System.out.println("Task " + taskNum + " ABORTED");
                         Map.Entry<Integer, Integer> me = new AbstractMap.SimpleEntry<Integer,Integer>(resourceNum, allocatedResources.get(resourceNum));
                         addToResourceList.add(me);
 
@@ -88,23 +98,31 @@ public class BankersTask {
                 updateNeededResources();
                 
             }
+            
+            // Release the number of units
             else if (name.equals("release")) {
+
                 int current = allocatedResources.get(resourceNum);
                 allocatedResources.put(resourceNum, current - units);
+
                 // Add to Resource List the amount that should be added to resource delayed after cycle
                 Map.Entry<Integer, Integer> me = new AbstractMap.SimpleEntry<Integer,Integer>(resourceNum, units);
                 addToResourceList.add(me);
-                // resourceMap.put(resourceNum, resourceMap.get(resourceNum) + units);
                 updateNeededResources();
                 activities.poll();
             }
+
+            // Terminate the task
             else if (name.equals("terminate")) {
+
                 terminatedTasks.add(this);
                 updateNeededResources();
                 activities.poll();
                 endCycle = cycle;
                 
             }
+
+            // Add compute time and wait
             else if (name.equals("compute")) {
                 computeTime = resourceNum; // Compute time is given as the second number
                 decreaseComputeTime();  
@@ -112,9 +130,17 @@ public class BankersTask {
             }
         }
     }
+
+    /* For debugging purposes
     // public void printMaxResources() {
     //     for (Map.Entry me : maxResources.entrySet()) {
     //         System.out.println("Max claim: " + me.getValue() + " units of Resource Number " + me.getKey());
+    //     }
+    // }
+
+    // public void printActivities () {
+    //     for (Activity a : activities) {
+    //         System.out.println(a);
     //     }
     // }
     
@@ -129,13 +155,13 @@ public class BankersTask {
     //         System.out.println("Task " + getTaskNumber() + " Allocated resources: " + me.getValue() + " units of Resource Number " + me.getKey());
     //     }
     // }
+    
+    For debugging purposes */
 
     public void decreaseComputeTime() { // Decrements the compute time
         computeTime--;
-        System.out.println("Compute time decremented. Time remaining for compute of Task " + getTaskNumber() + ": " +computeTime);
     }
     
-
     public int getTaskNumber() {
         return this.taskNumber;
     }
@@ -143,10 +169,9 @@ public class BankersTask {
     public int getFinishingTime() {
         return this.endCycle;
     }
-
-    
-    
-    public void updateNeededResources () { // Iterate through hashMap and update the needed resources. Must call every time allocated Resources is changed.
+ 
+    // Iterate through hashMap and update the needed resources. Must call every time allocated Resources is changed.
+    public void updateNeededResources () { 
         Iterator it1 = maxResources.entrySet().iterator();
         Iterator it2 = allocatedResources.entrySet().iterator();
         int counter = 1;
@@ -159,9 +184,9 @@ public class BankersTask {
         }
     }
 
+    // Prints the output for the task
     public void printOutput(boolean aborted) {
         double timeWaiting = Math.round((double)(waitingTime)/ endCycle * 100);
-        
         if (aborted) {
             System.out.printf("Task %-4daborted at cycle %d\n", taskNumber, endCycle);        
         }
@@ -169,8 +194,6 @@ public class BankersTask {
             System.out.printf("Task %-10d%-5d%-5d%d%%\n", taskNumber, endCycle, waitingTime, (int)timeWaiting);
         }
 
-
-        
     }
 
     public void initializeAllocatedResources(HashMap<Integer, Integer> resourceMap) {
@@ -183,6 +206,7 @@ public class BankersTask {
         return this.aborted;
     }
 
+    // Checks if the task is safe by comparing the needed resources matrix to the available resources
     public boolean checkSafeState (HashMap<Integer, Integer> neededResources, HashMap<Integer, Integer> resourceMap) {
         Iterator it1 = neededResources.entrySet().iterator();
         Iterator it2 = resourceMap.entrySet().iterator();
@@ -194,7 +218,6 @@ public class BankersTask {
             }
         }
         return true;
-
     }
 
     public int getComputeTime() {
@@ -204,12 +227,5 @@ public class BankersTask {
     public int getWaitingTime() {
         return this.waitingTime;
     }
-
-
-
-
-
-
-
 
 }

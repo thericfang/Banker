@@ -27,7 +27,7 @@ public class Tester {
         HashMap<Integer, Integer> resourceMap1 = new HashMap<Integer, Integer>(); // HashMap of available resources for optimistic resource manager
         
         int line = 1;
-        while (input.hasNext()) { //
+        while (input.hasNext()) { // Parses the activities 
             String curLine = input.nextLine();
             if (line == 1) {
                 String[] strings = curLine.split(" ");
@@ -46,6 +46,7 @@ public class Tester {
                 }
             }
             else {
+
                 if (curLine.matches("(.*)(\\d)(\\s+)(\\d)(\\s+)(\\d)")) {
                     String[] strings = curLine.split("\\s+"); // Split by using whitespace delimiter
                     int curTaskNumber = Integer.parseInt(strings[1]);
@@ -60,6 +61,7 @@ public class Tester {
             line++;
 
         }
+
         doOptimisticAlgorithm(optimisticTaskMap, resourceMap1);
         doBankersAlgorithm(bankersTaskMap, resourceMap);
 
@@ -88,7 +90,7 @@ public class Tester {
                 }
             }
             while (it.hasNext()) { // Do next activity for each Task
-                // printAvailableResources(resourceMap); For debugging
+
                 Map.Entry me = (Map.Entry) it.next();
                 BankersTask t = (BankersTask)me.getValue();
                     if (t.getComputeTime() != 0) { // If compute time incomplete
@@ -156,7 +158,7 @@ public class Tester {
             
         }
         double totalPercentOfWaitingTime = Math.round((double)(totalWaitTime)/(totalRunningTime)* 100);
-        System.out.printf("%-15s%-5d%-5d%d%%\n", "Total", totalRunningTime, totalWaitTime, (int)totalPercentOfWaitingTime);
+        System.out.printf("%-15s%-5d%-5d%d%%\n\n", "Total", totalRunningTime, totalWaitTime, (int)totalPercentOfWaitingTime);
     }
 
     public static void doOptimisticAlgorithm (HashMap<Integer, OptimisticTask> optimisticTaskMap, HashMap<Integer, Integer> resourceMap1) {
@@ -192,30 +194,7 @@ public class Tester {
                
             }
             resolveDeadLock(optimisticTaskMap, resourceMap1, blockedTasks, terminatedTasks, visitedTasks, addToResourceList, cycle);
-            // If at the end of a cycle all tasks are blocked, then there is a deadlock. Release the resources of the first task and make them available at the start of the next cycle.
-            // while (isDeadLock(optimisticTaskMap, resourceMap1)) {
-                // // Get lowest task number
-                // Collections.sort(blockedTasks, new Comparator<OptimisticTask>() { // sort by taskNum
-                //     @Override
-                //     public int compare(OptimisticTask t1, OptimisticTask t2) {
-                //         return t1.getTaskNumber() - t2.getTaskNumber();
-                //     }
-                // });
-                
-            //     OptimisticTask lowestTask = blockedTasks.remove(0);
-            //     // Remove lowest task's currently allocated resources and abort
-            //     for (Map.Entry mEntry : lowestTask.getAllocatedResources().entrySet()) {
-            //         int resourceNum = (Integer)mEntry.getKey();
-            //         int units = (Integer)mEntry.getValue();
-            //         // don't need to update allocated resources, just need to update available resources
-            //         addToResourceList.add(mEntry);
-            //     }
-            //     // Map.Entry<Integer, Integer> me = new AbstractMap.SimpleEntry<Integer,Integer>(resourceNum, units);
-            //     // addToResourceList.add(me);
-            //     lowestTask.setAborted();
-            //     terminatedTasks.add(lowestTask);
-            //     System.out.println("Task " + lowestTask.getTaskNumber()+ " ABORTED");
-            // }
+           
             while (!addToResourceList.isEmpty()) { // Update the available resources after a cycle, so those resources released during a cycle aren't available during the same cycle.
                 for (Map.Entry mEntry : addToResourceList) {
                     Integer CurrentKey = (Integer)mEntry.getKey();
@@ -227,10 +206,6 @@ public class Tester {
             }
             cycle++;
         }
-        // for (Map.Entry mEntry : optimisticTaskMap.entrySet()) { // 
-        //     OptimisticTask ot = (OptimisticTask)mEntry.getValue();
-        //     ot.printActivities();
-        // }
 
         printTasksOptimistic(terminatedTasks);
         
@@ -260,12 +235,13 @@ public class Tester {
             
         }
         double totalPercentOfWaitingTime = Math.round((double)(totalWaitTime)/(totalRunningTime)* 100);
-        System.out.printf("%-15s%-5d%-5d%d%%\n", "Total", totalRunningTime, totalWaitTime, (int)totalPercentOfWaitingTime);
+        System.out.printf("%-15s%-5d%-5d%d%%\n\n", "Total", totalRunningTime, totalWaitTime, (int)totalPercentOfWaitingTime);
     }
 
     public static void resolveDeadLock(HashMap<Integer, OptimisticTask> optimisticTaskMap, HashMap<Integer, Integer> resourceMap1,  
     List<OptimisticTask> blockedTasks, List<OptimisticTask> terminatedTasks, ArrayList<Integer> visitedTasks, List<Map.Entry> addToResourceList, int cycle) {
         while (blockedTasks.size() == optimisticTaskMap.size()-terminatedTasks.size() && !blockedTasks.isEmpty()) { // if there are just as many non-terminated tasks as there are blocked, we have a deadlock
+            
             // Get lowest task number
             Collections.sort(blockedTasks, new Comparator<OptimisticTask>() { // sort by taskNum
                 @Override
@@ -289,9 +265,6 @@ public class Tester {
             }
 
         }        
-        // if (!blockedTasks.isEmpty()) { // Check blocked tasks
-            
-        // }
     }
 
 
